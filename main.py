@@ -8,9 +8,9 @@ from pprint import pprint
 from datetime import datetime, timedelta, timezone
 from arxiv_query import download_arxiv_pdfs
 
-# 设置本地Zotero路径
+# 路径配置
 local_storage_path = r"C:\Users\username\Zotero" # 替换为你的Zotero本地存储路径
-arxiv_query = "cs.AI,cs.LG" # arXiv分类，逗号分隔
+arxiv_query = "cs.AI,cs.LG" # 替换为你感兴趣的arXiv分类，逗号分隔
 categories = arxiv_query.split(",")
 max_paper_num = 50 # 最多返回的论文数量
 save_dir=r"D:\test" # 替换为你想保存论文PDF的本地目录
