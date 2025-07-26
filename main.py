@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from arxiv_query import download_arxiv_pdfs
 
 # 设置本地Zotero路径
-local_storage_path = r"C:\Users\31756\Zotero" # 替换为你的Zotero本地存储路径
+local_storage_path = r"C:\Users\username\Zotero" # 替换为你的Zotero本地存储路径
 arxiv_query = "cs.AI,cs.LG" # arXiv分类，逗号分隔
 categories = arxiv_query.split(",")
 max_paper_num = 50 # 最多返回的论文数量
