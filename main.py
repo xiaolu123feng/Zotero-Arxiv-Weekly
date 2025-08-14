@@ -8,15 +8,20 @@ from pprint import pprint
 from datetime import datetime, timedelta, timezone
 from arxiv_query import download_arxiv_pdfs
 
-# 路径配置
+# 参数配置
 local_storage_path = r"C:\Users\username\Zotero" # 替换为你的Zotero本地存储路径
 arxiv_query = "cs.AI,cs.LG" # 替换为你感兴趣的arXiv分类，逗号分隔
 categories = arxiv_query.split(",")
 max_paper_num = 50 # 最多返回的论文数量
 save_dir=r"D:\test" # 替换为你想保存论文PDF的本地目录
+tag_weights = {
+    "ignore": 0.0,   # 完全忽略
+    "ml": 2.0,       # 强调机器学习标签
+    "physics": 1.5,  # 物理标签也要关注
+} # 这部分根据在本地Zotero上的文献库分类进行配置
 
 
-# 1 读取 Zotero 本地文献,并忽略Zotero里面的ignore标签，不想添加到查询范围的文献可以在Zotero里面加上ignore标签
+# 1 读取 Zotero 本地文献，提取不同标签的摘要内容
 def get_zotero_corpus(zotero_dir: str) -> list[dict]:
     db_path = os.path.join(zotero_dir, 'zotero.sqlite')
     storage_path = os.path.join(zotero_dir, 'storage')
@@ -27,6 +32,7 @@ def get_zotero_corpus(zotero_dir: str) -> list[dict]:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
+    # 查询文献和摘要
     query = """
     SELECT items.itemID, itemDataValues.value AS abstractNote,
            items.key AS itemKey, itemTypes.typeName,
@@ -37,23 +43,29 @@ def get_zotero_corpus(zotero_dir: str) -> list[dict]:
     LEFT JOIN fields ON itemData.fieldID = fields.fieldID
     LEFT JOIN itemTypes ON items.itemTypeID = itemTypes.itemTypeID
     LEFT JOIN itemAttachments ON items.itemID = itemAttachments.parentItemID
-    -- 排除包含标签 "ignore" 的项
     WHERE fields.fieldName = 'abstractNote'
       AND itemDataValues.value IS NOT NULL
-      AND items.itemID NOT IN (
-          SELECT itemTags.itemID
-          FROM itemTags
-          JOIN tags ON itemTags.tagID = tags.tagID
-          WHERE LOWER(tags.name) = 'ignore'
-      )
     """
-
     cursor.execute(query)
     rows = cursor.fetchall()
+
+    # 查询标签
+    tag_query = """
+    SELECT itemTags.itemID, tags.name
+    FROM itemTags
+    JOIN tags ON itemTags.tagID = tags.tagID
+    """
+    cursor.execute(tag_query)
+    tag_rows = cursor.fetchall()
+    tags_dict = {}
+    for row in tag_rows:
+        tags_dict.setdefault(row["itemID"], []).append(row["name"].lower())
+
     conn.close()
 
     corpus = []
     for row in rows:
+        item_tags = tags_dict.get(row["itemID"], [])
         item = {
             "itemID": row["itemID"],
             "itemKey": row["itemKey"],
@@ -62,6 +74,7 @@ def get_zotero_corpus(zotero_dir: str) -> list[dict]:
             "filePath": row["filePath"] if row["filePath"] else "",
             "storagePath": os.path.join(storage_path, row["itemKey"]),
             "dateAdded": row["dateAdded"],
+            "tags": item_tags,  # 保留标签
         }
         corpus.append(item)
     return corpus
@@ -129,4 +142,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
